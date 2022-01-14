@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PlatziCommerce</title>
+    <link rel="stylesheet" href="/composition-api/styles/styles.css" />
+    <link rel="shortcut icon" href="/composition-api/icons/online-shopping.png" type="image/x-icon">
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h3>PlatziCommerce</h3>
+        <div>
+          <span>Buscar producto: </span>
+          <input type="text" v-model="nameToFilter" placeholder="Nombre del producto">
+        </div>
+        <button class="cart" v-on:click="cartOpen = !cartOpen">Carro ({{ amountOfProducts }})</button>
+        <div class="cart-content" v-show="cartOpen">
+          <div
+            class="cart-content__product"
+            v-for="(product, index) in cart"
+            :key="product.name"
+            :class="{ 'bg-gray': index & 1 }"
+          >
+            <img v-bind:src="product.images[0].image" :alt="product.name" />
+            <span
+              >{{ product.name }} - $ {{ new
+              Intl.NumberFormat("es-CO").format(product.price) }} ({{ product.quantity }})</span
+            >
+          </div>
+          <p>Total: $ {{ new Intl.NumberFormat("es-CO").format(total) }}</p>
+        </div>
+      </header>
+      <main>
+        <product v-for="product in productList" :key="product.name" :product="product" @sendtocart="addToCart($event)"></product>
+      </main>
+    </div>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script>
+      const { createApp, ref, reactive, toRefs, watch, computed, onMounted } = Vue;
+      const app = createApp({
+          setup() { // Corresponde al created()
+            const products = ref([]);
+
+            /**
+             * --------------------------------- CART STATE ---------------------------------
+            */
+            const cartState = reactive({
+              cartOpen: false,
+              cart: [],
+
+              // Watch: Property for Watch method to calculate the total
+              //total: 0
+
+              /**
+               * TOTAL DEL CARRITO
+               * Type: Watch
+               * Segunda manera
+               */
+              total: computed(() => {
+                  return cartState.cart.reduce((prev, curr) => {
+                  const prevPrice = prev.price || prev;
+                  const prevQuantity = prev.quantity || 1;
+                  return prevPrice * prevQuantity + curr.price * curr.quantity;
+                }, 0);
+              }),
+              
+              // Amount of products added to the cart (cart length)
+              amountOfProducts: ref(0)
+            });
+
+            function addToCart(product) {
+              const prodIndex = cart.findIndex(prod => prod.name === product.name);
+              if (prodIndex >= 0) {
+                cart[prodIndex].quantity++;
+              }
+              else {
+                cart.push(product);
+              }
+              cartState.amountOfProducts++;
+              product.stock--;
+            }
+
+            /**
+             * TOTAL DEL CARRITO
+             * Type: Watch
+            */
+            /* watch(cartState.cart, (currValue, oldValue) => {
+              cartState.total = cartState.cart.reduce((prev, curr) => {
+                const prevPrice = prev.price || prev;
+                const prevQuantity = prev.quantity || 1;
+                return prevPrice * prevQuantity + curr.price * curr.quantity;
+              }, 0);
+            }); */
+
+            /**
+             * TOTAL DEL CARRITO
+             * Type: Computed
+             * Primera manera
+            */
+            /*const total = computed(() => {
+             return cartState.cart.reduce((prev, curr) => {
+                const prevPrice = prev.price || prev;
+                const prevQuantity = prev.quantity || 1;
+                return prevPrice * prevQuantity + curr.price * curr.quantity;
+              }, 0);
+            }); */
+
+            /**
+             * *******DESTRUCTURING*******
+             */
+            const { cart } = cartState;
+
+            /**
+             * Name to filter
+             */
+            const nameToFilter = ref("");
+
+            /**
+             * Product List Computed Method to filter products based on their names
+             */
+            const productList = computed(() => {
+              if (nameToFilter.value != "") {
+                return products.value.filter(prod => prod.name.toLowerCase() === nameToFilter.value.toLowerCase());
+              }
+              return products.value;
+            })
+
+            // Fetching API
+            fetch("https://my-json-server.typicode.com/iosamuel/demo/products")
+              .then(res => res.json())
+              .then(data => {
+                products.value = data;
+              });
+
+            // onMounted
+            onMounted(() => {
+              console.log("Mounted!");
+            });
+
+            return {
+              ...toRefs(cartState),
+              products,
+              addToCart,
+              nameToFilter,
+              productList
+            };
+          }
+        });
+        </script>
+    <script src="/composition-api/Product.js"></script>
+    <script src="/composition-api/Badge.js"></script>
+    <script>
+      app.mount("#app");
+    </script>
+  </body>
+</html>
